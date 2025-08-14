@@ -4,7 +4,7 @@ import 'package:analyzer/dart/constant/value.dart';
 import 'package:analyzer/dart/element/nullability_suffix.dart';
 import 'package:theme_extensions_annotation/theme_extension_annotation.dart';
 
-import 'package:analyzer/dart/element/element.dart';
+import 'package:analyzer/dart/element/element2.dart';
 import 'package:build/build.dart';
 import 'package:source_gen/source_gen.dart';
 
@@ -14,16 +14,16 @@ import 'templates.dart';
 
 class ThemeExtensionGenerator extends GeneratorForAnnotation<ThemeExtended> {
   void forEachField(
-      Map<ParameterElement, List<ElementAnnotation>> fields,
+      Map<FormalParameterElement, List<ElementAnnotation>> fields,
       Map<
               String,
               void Function(String type, String varname,
-                  ParameterElement element, DartObject? computeObject)>
+                  FormalParameterElement element, DartObject? computeObject)>
           on) {
     for (var f in fields.entries) {
       if (fields[f.key]!.isEmpty && on.containsKey('null')) {
         on['null']!(f.key.type.getDisplayString(withNullability: false),
-            f.key.name, f.key, null);
+            f.key.displayName, f.key, null);
       }
 
       for (var m in fields[f.key]!) {
@@ -31,27 +31,26 @@ class ThemeExtensionGenerator extends GeneratorForAnnotation<ThemeExtended> {
         name = name.replaceRange(name.indexOf('(') + 1, name.length - 1, '');
         if (on.containsKey(name)) {
           on[name]!(f.key.type.getDisplayString(withNullability: false),
-              f.key.name, f.key, m.computeConstantValue());
+              f.key.displayName, f.key, m.computeConstantValue());
           break;
         }
       }
     }
   }
 
-  Map<ParameterElement, List<ElementAnnotation>> inspectConstructor(
-      ConstructorElement element) {
-    Map<ParameterElement, List<ElementAnnotation>> inspect = {};
+  Map<FormalParameterElement, List<ElementAnnotation>> inspectConstructor(
+      ConstructorElement2 element) {
+    Map<FormalParameterElement, List<ElementAnnotation>> inspect = {};
 
-    for (var e in element.children) {
-      final parameterElement = e as ParameterElement;
-      inspect[parameterElement] = e.metadata;
+    for (var e in element.formalParameters) {
+      inspect[e] = e.metadata2.annotations;
     }
 
     return inspect;
   }
 
   List<Parameter> parseFields(
-      Map<ParameterElement, List<ElementAnnotation>> parameters,
+      Map<FormalParameterElement, List<ElementAnnotation>> parameters,
       LerpGenerator generator) {
     List<Parameter> p = [];
     forEachField(parameters, {
@@ -108,7 +107,7 @@ class ThemeExtensionGenerator extends GeneratorForAnnotation<ThemeExtended> {
     return p;
   }
 
-  String generateSource(Element element) {
+  String generateSource(Element2 element) {
     String result = '';
 
     return result;
@@ -116,20 +115,20 @@ class ThemeExtensionGenerator extends GeneratorForAnnotation<ThemeExtended> {
 
   @override
   FutureOr<String> generateForAnnotatedElement(
-    Element element,
+    Element2 element,
     ConstantReader annotation,
     BuildStep buildStep,
   ) {
-    var classImpl = element as ClassElement;
-    var constructorImpl = element.children[0] as ConstructorElement;
+    var classImpl = element as ClassElement2;
+    var constructorImpl = classImpl.constructors2.first;
 
     var result = '';
 
-    var targetType = DataType(classImpl.name);
-    var mixinType = DataType('_\$${classImpl.name}');
-    var decorationType = DataType('${classImpl.name}Decoration');
-    var implementationType = DataType('_${classImpl.name}');
-    var extensionType = DataType('${classImpl.name}Extension');
+    var targetType = DataType(classImpl.displayName);
+    var mixinType = DataType('_\$${classImpl.displayName}');
+    var decorationType = DataType('${classImpl.displayName}Decoration');
+    var implementationType = DataType('_${classImpl.displayName}');
+    var extensionType = DataType('${classImpl.displayName}Extension');
 
     var lerpGenerator = LerpGenerator();
     var parameters =
